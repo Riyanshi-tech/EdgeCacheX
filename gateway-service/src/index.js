@@ -1,5 +1,6 @@
 const express = require("express");
 const axios = require("axios");
+const redisClient = require("./redisClient");
 let routes = require("./routes");
 if (!Array.isArray(routes)) {
   routes = Object.values(routes);
@@ -16,6 +17,19 @@ app.get("/", (req, res) => {
 app.use(async (req, res) => {
   try {
     const requestPath = req.path;
+    const cacheKey = req.originalUrl;
+
+    if (req.method === "GET") {
+      try {
+        const cachedResponse = await redisClient.get(cacheKey);
+        if (cachedResponse) {
+          console.log("cache hit");
+          return res.json(JSON.parse(cachedResponse));
+        }
+      } catch (err) {
+        console.error("Redis get error:", err);
+      }
+    }
 
     // Find matching route
     const route = routes.find((r) => requestPath.startsWith(r.prefix));
@@ -42,6 +56,15 @@ app.use(async (req, res) => {
         params: req.query,
         headers: { ...req.headers, host: new URL(route.target).host }
       });
+
+      if (req.method === "GET" && response.status >= 200 && response.status < 300) {
+        console.log("cache miss");
+        try {
+          await redisClient.setEx(cacheKey, 60, JSON.stringify(response.data));
+        } catch (err) {
+          console.error("Redis set error:", err);
+        }
+      }
 
       res.status(response.status).json(response.data);
     } catch (forwardError) {
