@@ -7,7 +7,11 @@ if (!Array.isArray(routes)) {
 }
 
 const app = express();
+const cors = require("cors");
+app.use(cors());
 app.use(express.json());
+
+console.log("Loaded routes:", routes);
 
 const rateLimit = require("express-rate-limit");
 const { RedisStore } = require("rate-limit-redis");
@@ -37,20 +41,20 @@ app.use(async (req, res) => {
   try {
     const requestPath = req.path;
     const cacheKey = req.originalUrl;
+    console.log("Checking route for path:", requestPath);
     
-    // Log request to RabbitMQ
-    sendToQueue({
-      method: req.method,
-      path: requestPath,
-      timestamp: new Date().toISOString(),
-      ip: req.ip
-    });
-
     if (req.method === "GET") {
       try {
         const cachedResponse = await redisClient.get(cacheKey);
         if (cachedResponse) {
           console.log("cache hit");
+          sendToQueue({
+            method: req.method,
+            path: requestPath,
+            status: 200,
+            ip: req.ip,
+            timestamp: new Date().toISOString(),
+          });
           return res.json(JSON.parse(cachedResponse));
         }
       } catch (err) {
@@ -63,6 +67,13 @@ app.use(async (req, res) => {
 
     if (!route) {
       console.log("No route found for path:", requestPath);
+      sendToQueue({
+        method: req.method,
+        path: requestPath,
+        status: 404,
+        ip: req.ip,
+        timestamp: new Date().toISOString(),
+      });
       return res.status(404).json({ error: "No route found" });
     }
 
@@ -93,10 +104,26 @@ app.use(async (req, res) => {
         }
       }
 
+      sendToQueue({
+        method: req.method,
+        path: requestPath,
+        status: response.status,
+        ip: req.ip,
+        timestamp: new Date().toISOString(),
+      });
+
       res.status(response.status).json(response.data);
     } catch (forwardError) {
       console.error("Forwarding error:", forwardError.message);
-      res.status(forwardError.response?.status || 500).json({
+      const statusCode = forwardError.response?.status || 500;
+      sendToQueue({
+        method: req.method,
+        path: requestPath,
+        status: statusCode,
+        ip: req.ip,
+        timestamp: new Date().toISOString(),
+      });
+      res.status(statusCode).json({
         error: "Gateway forwarding error",
         details: forwardError.message,
         target: targetUrl

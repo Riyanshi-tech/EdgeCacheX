@@ -26,6 +26,7 @@ async function startWorker() {
         data: {
           path: data.path,
           method: data.method,
+          status: data.status || 200,
           ip: data.ip,
           timestamp: new Date(data.timestamp),
         },
@@ -43,12 +44,46 @@ startWorker();
 
 // Restore the Express server
 const express = require("express");
+const cors = require("cors");
 const app = express();
+
+app.use(cors());
+app.use(express.json());
 
 app.get("/some-endpoint", (req, res) => {
   res.json({
     message: "Worker service response 🚀",
   });
+});
+
+app.get("/analytics", async (req, res) => {
+  try {
+    const totalRequests = await prisma.log.count();
+    const success = await prisma.log.count({
+      where: {
+        status: {
+          gte: 200,
+          lt: 300,
+        },
+      },
+    });
+    const errors = await prisma.log.count({
+      where: {
+        status: {
+          gte: 400,
+        },
+      },
+    });
+
+    res.json({
+      totalRequests,
+      success,
+      errors,
+    });
+  } catch (error) {
+    console.error("Analytics error:", error);
+    res.status(500).json({ error: "Failed to fetch analytics" });
+  }
 });
 
 app.listen(5001, () => {

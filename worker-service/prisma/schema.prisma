@@ -10,6 +10,7 @@ model Log {
   id        String   @id @default(uuid())
   path      String
   method    String
+  status    Int
   ip        String
   timestamp DateTime
 }
