@@ -9,15 +9,42 @@ if (!Array.isArray(routes)) {
 const app = express();
 app.use(express.json());
 
+const rateLimit = require("express-rate-limit");
+const { RedisStore } = require("rate-limit-redis");
+
+const limiter = rateLimit({
+  windowMs: 60 * 1000, // 1 minute
+  max: 10, // Limit each IP to 10 requests per window
+  standardHeaders: true,
+  legacyHeaders: false,
+  store: new RedisStore({
+    sendCommand: (...args) => redisClient.sendCommand(args),
+  }),
+  message: { error: "Too many requests, please try again later." }
+});
+
+// Apply rate limiter to all requests
+app.use(limiter);
+
 app.get("/", (req, res) => {
   res.send("Gateway running ");
 });
+
+const { connectQueue, sendToQueue } = require("./queue");
 
 // DYNAMIC ROUTING
 app.use(async (req, res) => {
   try {
     const requestPath = req.path;
     const cacheKey = req.originalUrl;
+    
+    // Log request to RabbitMQ
+    sendToQueue({
+      method: req.method,
+      path: requestPath,
+      timestamp: new Date().toISOString(),
+      ip: req.ip
+    });
 
     if (req.method === "GET") {
       try {
@@ -84,6 +111,7 @@ app.use(async (req, res) => {
   }
 });
 
-app.listen(5000, () => {
+app.listen(5000, async () => {
+  await connectQueue();
   console.log("Gateway running on port 5000");
 });
