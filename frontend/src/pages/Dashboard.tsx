@@ -1,6 +1,9 @@
 import { useEffect, useState } from "react";
 import api from "../services/api";
 import Card from "../components/card";
+import RequestsChart from "../components/RequestsChart";
+import LogsTable from "../components/LogsTable";
+
 
 type Analytics = {
   totalRequests: number;
@@ -10,43 +13,76 @@ type Analytics = {
 
 export default function Dashboard() {
   const [data, setData] = useState<Analytics | null>(null);
+  const [timeline, setTimeline] = useState([]);
+  const [logs, setLogs] = useState([]);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    api.get("/analytics").then((res) => {
-      setData(res.data);
-    });
+    const fetchData = () => {
+      api.get("/analytics").then((res) => setData(res.data));
+      api.get("/analytics/timeline").then((res) => setTimeline(res.data));
+      api.get("/analytics/logs").then((res) => setLogs(res.data));
+    };
+
+    // initial load
+    fetchData();
+
+    // auto refresh every 5 sec
+    const interval = setInterval(fetchData, 5000);
+
+    // cleanup
+    return () => clearInterval(interval);
   }, []);
+
+  if (error) {
+    return (
+      <div className="flex justify-center items-center h-screen text-red-500 text-xl font-semibold">
+        {error}
+      </div>
+    );
+  }
 
   if (!data) {
     return (
-      <div className="flex justify-center items-center h-screen text-xl">
+      <div className="flex justify-center items-center h-screen text-xl font-semibold text-gray-500">
         Loading...
       </div>
     );
   }
 
   return (
-    <div className="p-8 bg-gray-100 min-h-screen">
-      <h1 className="text-3xl font-bold mb-6">EdgeCacheX Dashboard</h1>
+    <div className="p-8 bg-gray-50 min-h-screen font-sans">
+      <div className="max-w-7xl mx-auto">
+        <h1 className="text-3xl font-bold mb-8 text-gray-800 tracking-tight">EdgeCacheX Dashboard</h1>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <Card
-          title="Total Requests"
-          value={data.totalRequests}
-          color="bg-blue-500"
-        />
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
+          <Card
+            title="Total Requests"
+            value={data.totalRequests}
+            color="bg-gradient-to-br from-blue-500 to-pink-600"
+          />
 
-        <Card
-          title="Success Requests"
-          value={data.success}
-          color="bg-green-500"
-        />
+          <Card
+            title="Success Requests"
+            value={data.success}
+            color="bg-gradient-to-br from-blue-500 to-green-600"
+          />
 
-        <Card
-          title="Error Requests"
-          value={data.errors}
-          color="bg-red-500"
-        />
+          <Card
+            title="Error Requests"
+            value={data.errors}
+            color="bg-gradient-to-br from-blue-500 to-red-600"
+          />
+        </div>
+
+        <div className="space-y-10">
+          <div className="bg-white p-8 rounded-2xl shadow-sm border border-gray-100">
+            <RequestsChart data={timeline} />
+          </div>
+          <div className="bg-white p-8 rounded-2xl shadow-sm border border-gray-100">
+            <LogsTable logs={logs} />
+          </div>
+        </div>
       </div>
     </div>
   );

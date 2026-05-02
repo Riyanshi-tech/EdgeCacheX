@@ -18,7 +18,7 @@ const { RedisStore } = require("rate-limit-redis");
 
 const limiter = rateLimit({
   windowMs: 60 * 1000, // 1 minute
-  max: 10, // Limit each IP to 10 requests per window
+  max: 100, // Limit each IP to 100 requests per window
   standardHeaders: true,
   legacyHeaders: false,
   store: new RedisStore({
@@ -42,7 +42,7 @@ app.use(async (req, res) => {
     const requestPath = req.path;
     const cacheKey = req.originalUrl;
     console.log("Checking route for path:", requestPath);
-    
+
     if (req.method === "GET") {
       try {
         const cachedResponse = await redisClient.get(cacheKey);

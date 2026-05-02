@@ -9,7 +9,7 @@ const adapter = new PrismaPg(pool);
 const prisma = new PrismaClient({ adapter });
 
 async function startWorker() {
-  const connection = await amqp.connect("amqp://localhost");
+  const connection = await amqp.connect(process.env.RABBITMQ_URL || "amqp://localhost");
   const channel = await connection.createChannel();
 
   await channel.assertQueue("logs");
@@ -85,7 +85,49 @@ app.get("/analytics", async (req, res) => {
     res.status(500).json({ error: "Failed to fetch analytics" });
   }
 });
+app.get("/analytics/timeline", async (req, res) => {
+  try {
+    const logs = await prisma.log.findMany({
+      orderBy: { timestamp: "asc" },
+    });
 
+    // Group by minute
+    const grouped = {};
+
+    logs.forEach((log) => {
+      const time = new Date(log.timestamp)
+        .toISOString()
+        .slice(0, 16); // YYYY-MM-DDTHH:MM
+
+      if (!grouped[time]) {
+        grouped[time] = 0;
+      }
+
+      grouped[time]++;
+    });
+
+    const result = Object.entries(grouped).map(([time, count]) => ({
+      time,
+      count,
+    }));
+
+    res.json(result);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+app.get("/analytics/logs", async (req, res) => {
+  try {
+    const logs = await prisma.log.findMany({
+      orderBy: { timestamp: "desc" },
+      take: 50, // latest 50 logs
+    });
+
+    res.json(logs);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
 app.listen(5001, () => {
   console.log("Worker HTTP server running on port 5001");
 });

@@ -1,3 +1,5 @@
+const WORKER_URL = process.env.WORKER_URL || "http://localhost:5001";
+
 module.exports = [
   {
     prefix: "/api",
@@ -5,10 +7,10 @@ module.exports = [
   },
   {
     prefix: "/worker",
-    target: "http://localhost:5001",
+    target: WORKER_URL,
   },
   {
     prefix: "/analytics",
-    target: "http://localhost:5001/analytics",
+    target: `${WORKER_URL}/analytics`,
   },
 ];
