@@ -15,8 +15,7 @@ export default function Dashboard() {
   const [data, setData] = useState<Analytics | null>(null);
   const [timeline, setTimeline] = useState([]);
   const [logs, setLogs] = useState([]);
-  const [error, setError] = useState<string | null>(null);
-
+const [error, ] = useState(null);
   useEffect(() => {
     const fetchData = () => {
       api.get("/analytics").then((res) => setData(res.data));
@@ -41,7 +40,6 @@ export default function Dashboard() {
       </div>
     );
   }
-
   if (!data) {
     return (
       <div className="flex justify-center items-center h-screen text-xl font-semibold text-gray-500">
