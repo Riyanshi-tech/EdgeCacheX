@@ -29,7 +29,7 @@ export default function Dashboard() {
         setTimeline(timelineRes.data);
         setLogs(logsRes.data);
         setError(null); // clear error if success
-      } catch (err) {
+      } catch (err:unknown) {
         console.error("Dashboard fetch error:", err);
         setError("Failed to fetch dashboard data. Please try again.");
       }
