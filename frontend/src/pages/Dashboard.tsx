@@ -4,7 +4,6 @@ import Card from "../components/card";
 import RequestsChart from "../components/RequestsChart";
 import LogsTable from "../components/LogsTable";
 
-
 type Analytics = {
   totalRequests: number;
   success: number;
@@ -13,14 +12,27 @@ type Analytics = {
 
 export default function Dashboard() {
   const [data, setData] = useState<Analytics | null>(null);
-  const [timeline, setTimeline] = useState([]);
-  const [logs, setLogs] = useState([]);
-const [error, ] = useState(null);
+  const [timeline, setTimeline] = useState<any[]>([]);
+  const [logs, setLogs] = useState<any[]>([]);
+  const [error, setError] = useState<string | null>(null);
+
   useEffect(() => {
-    const fetchData = () => {
-      api.get("/analytics").then((res) => setData(res.data));
-      api.get("/analytics/timeline").then((res) => setTimeline(res.data));
-      api.get("/analytics/logs").then((res) => setLogs(res.data));
+    const fetchData = async () => {
+      try {
+        const [analyticsRes, timelineRes, logsRes] = await Promise.all([
+          api.get("/analytics"),
+          api.get("/analytics/timeline"),
+          api.get("/analytics/logs"),
+        ]);
+
+        setData(analyticsRes.data);
+        setTimeline(timelineRes.data);
+        setLogs(logsRes.data);
+        setError(null); // clear error if success
+      } catch (err) {
+        console.error("Dashboard fetch error:", err);
+        setError("Failed to fetch dashboard data. Please try again.");
+      }
     };
 
     // initial load
@@ -33,6 +45,7 @@ const [error, ] = useState(null);
     return () => clearInterval(interval);
   }, []);
 
+  // Error UI
   if (error) {
     return (
       <div className="flex justify-center items-center h-screen text-red-500 text-xl font-semibold">
@@ -40,6 +53,8 @@ const [error, ] = useState(null);
       </div>
     );
   }
+
+  // Loading UI
   if (!data) {
     return (
       <div className="flex justify-center items-center h-screen text-xl font-semibold text-gray-500">
@@ -51,8 +66,11 @@ const [error, ] = useState(null);
   return (
     <div className="p-8 bg-gray-50 min-h-screen font-sans">
       <div className="max-w-7xl mx-auto">
-        <h1 className="text-3xl font-bold mb-8 text-gray-800 tracking-tight">EdgeCacheX Dashboard</h1>
+        <h1 className="text-3xl font-bold mb-8 text-gray-800 tracking-tight">
+          EdgeCacheX Dashboard
+        </h1>
 
+        {/* Cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
           <Card
             title="Total Requests"
@@ -73,10 +91,12 @@ const [error, ] = useState(null);
           />
         </div>
 
+        {/* Charts + Logs */}
         <div className="space-y-10">
           <div className="bg-white p-8 rounded-2xl shadow-sm border border-gray-100">
             <RequestsChart data={timeline} />
           </div>
+
           <div className="bg-white p-8 rounded-2xl shadow-sm border border-gray-100">
             <LogsTable logs={logs} />
           </div>
