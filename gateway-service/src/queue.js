@@ -3,12 +3,21 @@ const amqp = require("amqplib");
 let channel;
 
 async function connectQueue() {
-  const connection = await amqp.connect(process.env.RABBITMQ_URL || "amqp://localhost");
-  channel = await connection.createChannel();
+  try {
+    if (!process.env.RABBITMQ_URL) {
+      console.log("RabbitMQ disabled (no URL provided)");
+      return;
+    }
 
-  await channel.assertQueue("logs");
+    const connection = await amqp.connect(process.env.RABBITMQ_URL);
+    channel = await connection.createChannel();
 
-  console.log("✅ Connected to RabbitMQ");
+    await channel.assertQueue("logs");
+
+    console.log("Connected to RabbitMQ");
+  } catch (err) {
+    console.log("RabbitMQ connection failed, continuing without it");
+  }
 }
 
 function sendToQueue(data) {
