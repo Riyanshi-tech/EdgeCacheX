@@ -9,35 +9,40 @@ const adapter = new PrismaPg(pool);
 const prisma = new PrismaClient({ adapter });
 
 async function startWorker() {
-  const connection = await amqp.connect(process.env.RABBITMQ_URL || "amqp://localhost");
-  const channel = await connection.createChannel();
+  try {
+    const connection = await amqp.connect(process.env.RABBITMQ_URL || "amqp://localhost");
+    const channel = await connection.createChannel();
 
-  await channel.assertQueue("logs");
+    await channel.assertQueue("logs");
 
-  console.log("Worker listening...");
+    console.log("✅ Worker connected to RabbitMQ");
 
-  channel.consume("logs", async (msg) => {
-    const data = JSON.parse(msg.content.toString());
+    channel.consume("logs", async (msg) => {
+      const data = JSON.parse(msg.content.toString());
 
-    console.log("Log received:", data);
+      console.log("Log received:", data);
 
-    try {
-      await prisma.log.create({
-        data: {
-          path: data.path,
-          method: data.method,
-          status: data.status || 200,
-          ip: data.ip,
-          timestamp: new Date(data.timestamp),
-        },
-      });
-      console.log("Log saved to DB successfully!");
-    } catch (error) {
-      console.error("Failed to save log to DB:", error);
-    }
+      try {
+        await prisma.log.create({
+          data: {
+            path: data.path,
+            method: data.method,
+            status: data.status || 200,
+            ip: data.ip,
+            timestamp: new Date(data.timestamp),
+          },
+        });
+        console.log("Log saved to DB successfully!");
+      } catch (error) {
+        console.error("Failed to save log to DB:", error);
+      }
 
-    channel.ack(msg);
-  });
+      channel.ack(msg);
+    });
+  } catch (error) {
+    console.error("⚠️ Worker failed to connect to RabbitMQ:", error.message);
+    console.log("Worker will continue without RabbitMQ (Log collection disabled)");
+  }
 }
 
 startWorker();
