@@ -128,6 +128,7 @@ app.get("/analytics/logs", async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
-app.listen(5001, () => {
-  console.log("Worker HTTP server running on port 5001");
+const PORT = process.env.PORT || 5001;
+app.listen(PORT, () => {
+  console.log(`Worker HTTP server running on port ${PORT}`);
 });
