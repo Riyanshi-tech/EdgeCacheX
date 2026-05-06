@@ -1,16 +1,16 @@
-FROM node:20-slim
-
+# Build stage
+FROM node:20-slim AS build
 WORKDIR /app
-
 COPY package*.json ./
 RUN npm install
-
 COPY . .
+RUN npm run build
 
-# Build the app (optional if running dev, but good for checks)
-# RUN npm run build 
+# Final stage to serve the app
+FROM node:20-slim
+WORKDIR /app
+RUN npm install -g serve
+COPY --from=build /app/dist ./dist
 
-EXPOSE 5173
-
-# Vite will now use the PORT env var and 0.0.0.0 host from vite.config.ts
-CMD ["npm", "run", "dev", "--", "--host"]
+# Render provides the PORT environment variable automatically
+CMD ["sh", "-c", "serve -s dist -l $PORT"]
