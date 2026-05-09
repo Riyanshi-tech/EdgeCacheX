@@ -148,6 +148,7 @@ const cors = require("cors");
 
 const redisClient = require("./redisClient");
 const { connectQueue, sendToQueue } = require("./queue");
+const { connectRedis } = redisClient;
 
 let routes = require("./routes");
 if (!Array.isArray(routes)) {
@@ -193,8 +194,8 @@ app.use(async (req, res) => {
     // ✅ CACHE CHECK (SAFE)
     if (req.method === "GET") {
       try {
-        if (redisClient) {
-          const cachedResponse = await redisClient.get(cacheKey);
+        if (redisClient.client) {
+          const cachedResponse = await redisClient.client.get(cacheKey);
 
           if (cachedResponse) {
             console.log("⚡ Cache HIT");
@@ -211,7 +212,7 @@ app.use(async (req, res) => {
           }
         }
       } catch (err) {
-        console.log("⚠️ Redis unavailable (GET)");
+        console.log("⚠️ Redis unavailable (GET):", err.message);
       }
     }
 
@@ -235,7 +236,12 @@ app.use(async (req, res) => {
     }
 
     const newPath = requestPath.replace(route.prefix, "") || "/";
-    const targetUrl = route.target + newPath;
+    let targetUrl = route.target + newPath;
+
+    // ✅ Ensure targetUrl has protocol
+    if (!targetUrl.startsWith("http")) {
+      targetUrl = "https://" + targetUrl;
+    }
 
     console.log(`➡️ Forwarding ${req.method} ${requestPath} → ${targetUrl}`);
 
@@ -254,8 +260,8 @@ app.use(async (req, res) => {
     // ✅ CACHE STORE (SAFE)
     if (req.method === "GET" && response.status >= 200 && response.status < 300) {
       try {
-        if (redisClient) {
-          await redisClient.setEx(
+        if (redisClient.client) {
+          await redisClient.client.setEx(
             cacheKey,
             60,
             JSON.stringify(response.data)
@@ -263,7 +269,7 @@ app.use(async (req, res) => {
           console.log("💾 Cached response");
         }
       } catch (err) {
-        console.log("⚠️ Redis unavailable (SET)");
+        console.log("⚠️ Redis unavailable (SET):", err.message);
       }
     }
 
@@ -297,6 +303,12 @@ app.listen(PORT, async () => {
     await connectQueue();
   } catch (err) {
     console.log("⚠️ Queue not connected");
+  }
+
+  try {
+    await connectRedis();
+  } catch (err) {
+    console.log("⚠️ Redis not connected");
   }
 
   console.log(`🚀 Gateway running on port ${PORT}`);

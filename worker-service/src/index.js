@@ -4,13 +4,17 @@ const { Pool } = require("pg");
 const { PrismaPg } = require("@prisma/adapter-pg");
 const { PrismaClient } = require("@prisma/client");
 
+if (!process.env.DATABASE_URL) {
+  console.error("❌ DATABASE_URL is missing!");
+}
+
 const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 const adapter = new PrismaPg(pool);
 const prisma = new PrismaClient({ adapter });
 
 async function startWorker() {
   try {
-    const connection = await amqp.connect(process.env.RABBITMQ_URL || "amqp://localhost");
+    const connection = await amqp.connect(process.env.RABBITMQ_URL);
     const channel = await connection.createChannel();
 
     await channel.assertQueue("logs");
