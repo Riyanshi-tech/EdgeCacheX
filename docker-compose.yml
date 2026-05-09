@@ -12,13 +12,22 @@ services:
       - "5672:5672"
       - "15672:15672"
 
+  db:
+    image: postgres:alpine
+    environment:
+      - POSTGRES_USER=user
+      - POSTGRES_PASSWORD=pass
+      - POSTGRES_DB=edgecachex
+    ports:
+      - "5432:5432"
+
   gateway:
     build: ./gateway-service
     ports:
       - "5000:5000"
     environment:
       - REDIS_URL=redis://redis:6379
-      - RABBITMQ_URL=amqp://rabbitmq
+      - RABBITMQ_URL=amqp://rabbitmq:5672
       - WORKER_URL=http://worker:5001
     depends_on:
       - redis
@@ -29,16 +38,17 @@ services:
     ports:
       - "5001:5001"
     environment:
-      - DATABASE_URL=${DATABASE_URL}
-      - RABBITMQ_URL=amqp://rabbitmq
+      - DATABASE_URL=postgresql://user:pass@db:5432/edgecachex?schema=public
+      - RABBITMQ_URL=amqp://rabbitmq:5672
     depends_on:
       - rabbitmq
+      - db
 
   frontend:
     build: ./frontend
     ports:
       - "5173:5173"
     environment:
-      - VITE_API_URL=http://localhost:5000
+      - VITE_API_URL=http://localhost:5000 # This stays localhost because it's accessed by the browser
     depends_on:
       - gateway

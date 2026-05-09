@@ -44,8 +44,9 @@ async function startWorker() {
       channel.ack(msg);
     });
   } catch (error) {
-    console.error("⚠️ Worker failed to connect to RabbitMQ:", error.message);
-    console.log("Worker will continue without RabbitMQ (Log collection disabled)");
+    console.error("❌ Worker failed to connect to RabbitMQ:", error.message);
+    // Exit the process so Docker can restart it
+    process.exit(1);
   }
 }
 

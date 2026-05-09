@@ -16,12 +16,16 @@ async function connectQueue() {
 
     console.log("Connected to RabbitMQ");
   } catch (err) {
-    console.log("RabbitMQ connection failed, continuing without it");
+    console.log("RabbitMQ connection failed:", err.message);
+    // In a containerized environment, we might want to exit here
+    // but we'll follow the user's advice for the sendToQueue function.
   }
 }
 
 function sendToQueue(data) {
-  if (!channel) return;
+  if (!channel) {
+    throw new Error("RabbitMQ channel not initialized. Check your RABBITMQ_URL and container status.");
+  }
 
   channel.sendToQueue(
     "logs",
