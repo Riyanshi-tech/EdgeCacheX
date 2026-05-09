@@ -1,4 +1,10 @@
-const WORKER_URL = process.env.WORKER_URL || "http://localhost:5001";
+const WORKER_URL = process.env.WORKER_URL;
+
+if (!WORKER_URL) {
+  console.log("⚠️ WARNING: WORKER_URL is not set. Defaulting to localhost:5001 (Dev Mode only)");
+}
+
+const finalWorkerUrl = WORKER_URL || "http://localhost:5001";
 
 module.exports = [
   {
@@ -7,10 +13,10 @@ module.exports = [
   },
   {
     prefix: "/worker",
-    target: WORKER_URL,
+    target: finalWorkerUrl,
   },
   {
     prefix: "/analytics",
-    target: `${WORKER_URL}/analytics`,
+    target: `${finalWorkerUrl}/analytics`,
   },
 ];
