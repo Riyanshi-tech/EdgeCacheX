@@ -92,7 +92,7 @@ app.use(async (req, res) => {
       return res.status(404).json({ error: "No route found" });
     }
 
-    const newPath = requestPath.replace(route.prefix, "") || "/";
+    const newPath = requestPath.replace(route.prefix, "");
     targetUrl = route.target + newPath;
 
     // Ensure targetUrl has protocol
