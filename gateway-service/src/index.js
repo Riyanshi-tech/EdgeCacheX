@@ -92,6 +92,7 @@ app.use(async (req, res) => {
       return res.status(404).json({ error: "No route found" });
     }
 
+    // Fixed path logic to avoid double slashes
     const newPath = requestPath.replace(route.prefix, "");
     targetUrl = route.target + newPath;
 
@@ -152,10 +153,7 @@ app.use(async (req, res) => {
 
   } catch (error) {
     console.error(`Gateway error on ${req.method} ${req.path}:`, error.message);
-    if (error.response) {
-      console.error("Target responded with:", error.response.status, error.response.data);
-    }
-
+    
     res.status(error.response?.status || 500).json({
       error: "Gateway error",
       details: error.message,
