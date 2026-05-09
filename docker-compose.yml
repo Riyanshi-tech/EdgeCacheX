@@ -3,17 +3,20 @@ version: '3.8'
 services:
   redis:
     image: redis:alpine
+    restart: always
     ports:
       - "6379:6379"
 
   rabbitmq:
     image: rabbitmq:3-management
+    restart: always
     ports:
       - "5672:5672"
       - "15672:15672"
 
   db:
     image: postgres:alpine
+    restart: always
     environment:
       - POSTGRES_USER=user
       - POSTGRES_PASSWORD=pass
@@ -23,6 +26,7 @@ services:
 
   gateway:
     build: ./gateway-service
+    restart: always
     ports:
       - "5000:5000"
     environment:
@@ -35,6 +39,7 @@ services:
 
   worker:
     build: ./worker-service
+    restart: always
     ports:
       - "5001:5001"
     environment:
@@ -46,9 +51,11 @@ services:
 
   frontend:
     build: ./frontend
+    restart: always
     ports:
       - "5173:5173"
     environment:
-      - VITE_API_URL=http://localhost:5000 # This stays localhost because it's accessed by the browser
+      - VITE_API_URL=http://localhost:5000
+      - PORT=5173
     depends_on:
       - gateway
