@@ -36,6 +36,13 @@ services:
     depends_on:
       - redis
       - rabbitmq
+    develop:
+      watch:
+        - action: sync
+          path: ./gateway-service
+          target: /app
+          ignore:
+            - node_modules/
 
   worker:
     build: ./worker-service
@@ -48,6 +55,13 @@ services:
     depends_on:
       - rabbitmq
       - db
+    develop:
+      watch:
+        - action: sync
+          path: ./worker-service
+          target: /app
+          ignore:
+            - node_modules/
 
   frontend:
     build: ./frontend
@@ -59,3 +73,10 @@ services:
       - PORT=5173
     depends_on:
       - gateway
+    develop:
+      watch:
+        - action: sync
+          path: ./frontend
+          target: /app
+          ignore:
+            - node_modules/
