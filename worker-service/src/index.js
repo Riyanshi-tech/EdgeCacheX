@@ -4,17 +4,13 @@ const { Pool } = require("pg");
 const { PrismaPg } = require("@prisma/adapter-pg");
 const { PrismaClient } = require("@prisma/client");
 
-if (!process.env.DATABASE_URL) {
-  console.error("❌ DATABASE_URL is missing!");
-}
-
 const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 const adapter = new PrismaPg(pool);
 const prisma = new PrismaClient({ adapter });
 
 async function startWorker() {
   try {
-    const connection = await amqp.connect(process.env.RABBITMQ_URL);
+    const connection = await amqp.connect(process.env.RABBITMQ_URL || "amqp://localhost");
     const channel = await connection.createChannel();
 
     await channel.assertQueue("logs");
@@ -44,9 +40,8 @@ async function startWorker() {
       channel.ack(msg);
     });
   } catch (error) {
-    console.error("❌ Worker failed to connect to RabbitMQ:", error.message);
-    // Exit the process so Docker can restart it
-    process.exit(1);
+    console.error("Worker failed to connect to RabbitMQ:", error.message);
+    console.log("Worker will continue without RabbitMQ (Log collection disabled)");
   }
 }
 
