@@ -4,8 +4,7 @@ if (!WORKER_URL) {
   console.log("WARNING: WORKER_URL is not set. Defaulting to localhost:5001 (Dev Mode only)");
 }
 
-// Clean up trailing slash from the base URL if it exists
-const finalWorkerUrl = (WORKER_URL || "http://localhost:5001").replace(/\/$/, "");
+const finalWorkerUrl = WORKER_URL || "http://localhost:5001";
 
 module.exports = [
   {
@@ -18,6 +17,6 @@ module.exports = [
   },
   {
     prefix: "/analytics",
-    target: finalWorkerUrl + "/analytics", // Ensure single slash
+    target: `${finalWorkerUrl}/analytics`,
   },
 ];
